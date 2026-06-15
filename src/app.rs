@@ -3,6 +3,14 @@ use std::path::PathBuf;
 use crate::config::Terminal;
 use crate::parser::{load_groups, CommandFile, Group, Section};
 
+#[derive(Debug, Clone)]
+pub struct PendingCommand {
+    pub group: String,
+    pub file: String,
+    pub section: String,
+    pub commands: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Focus {
     Groups,
@@ -19,7 +27,7 @@ pub struct App {
     pub file_index: usize,
     pub section_index: usize,
     pub focus: Focus,
-    pub pending_command: Option<Vec<String>>,
+    pub pending_command: Option<PendingCommand>,
     pub message: Option<String>,
 }
 

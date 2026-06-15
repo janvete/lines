@@ -73,6 +73,15 @@ The default terminal is `Terminal` (macOS Terminal.app). The default shell is de
 | `r` | reload data |
 | `q` / `Esc` | quit |
 
+## History
+
+Every command run through `lines` is appended to `~/.lines/history.log`:
+
+```
+2026-06-15 08:30:15 [Servers/web.md] Main server: ssh admin@web.example.com
+2026-06-15 08:31:02 [Scripts/update.md] Run all: ssh admin@host1.example.com /opt/app/update.sh; ssh admin@host2.example.com /opt/app/update.sh
+```
+
 ## Backup
 
 The entire `~/.lines` folder is plain text. Copy it to a disk, Git repo, or iCloud. On a new Mac, move it to the same location and `lines` works immediately.

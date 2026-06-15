@@ -2,6 +2,7 @@ mod app;
 mod commands;
 mod config;
 mod events;
+mod logger;
 mod parser;
 mod ui;
 
@@ -66,8 +67,16 @@ fn main() -> io::Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    if let Some(commands) = app.pending_command {
-        run_in_current_terminal(&commands, &app.shell);
+    if let Some(pending) = app.pending_command {
+        logger::log_run(
+            &app.data_dir,
+            &pending.group,
+            &pending.file,
+            &pending.section,
+            &pending.commands,
+            false,
+        );
+        run_in_current_terminal(&pending.commands, &app.shell);
     }
 
     Ok(())

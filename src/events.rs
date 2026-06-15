@@ -2,7 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use std::io;
 use std::time::Duration;
 
-use crate::app::App;
+use crate::app::{App, PendingCommand};
 use crate::commands::{edit_file, run_section};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,12 +42,25 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                     }
                 }
                 KeyCode::Char('o') => {
-                    if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
-                        run_section(section, file, &app.terminal, &app.shell, &app.data_dir);
+                    if let (Some(section), Some(file), Some(group)) =
+                        (app.current_section(), app.current_file(), app.current_group())
+                    {
+                        run_section(
+                            section,
+                            file,
+                            &app.terminal,
+                            &app.shell,
+                            &app.data_dir,
+                            &group.name,
+                            &file.name,
+                            &section.title,
+                        );
                     }
                 }
                 KeyCode::Enter => {
-                    if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
+                    if let (Some(section), Some(file), Some(group)) =
+                        (app.current_section(), app.current_file(), app.current_group())
+                    {
                         let commands = if section.is_run_all() {
                             file.sections
                                 .iter()
@@ -58,7 +71,12 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                             section.commands.clone()
                         };
                         if !commands.is_empty() {
-                            app.pending_command = Some(commands);
+                            app.pending_command = Some(PendingCommand {
+                                group: group.name.clone(),
+                                file: file.name.clone(),
+                                section: section.title.clone(),
+                                commands,
+                            });
                             return false;
                         }
                     }

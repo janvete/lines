@@ -7,14 +7,19 @@ use std::process::Command;
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use crate::config::Terminal;
+use crate::logger;
 use crate::parser::{CommandFile, Section};
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_section(
     section: &Section,
     file: &CommandFile,
     terminal: &Terminal,
     shell: &str,
     data_dir: &Path,
+    group_name: &str,
+    file_name: &str,
+    section_name: &str,
 ) {
     let commands = if section.is_run_all() {
         file.sections
@@ -29,6 +34,15 @@ pub fn run_section(
     if commands.is_empty() {
         return;
     }
+
+    logger::log_run(
+        data_dir,
+        group_name,
+        file_name,
+        section_name,
+        &commands,
+        true,
+    );
 
     match terminal {
         Terminal::Ghostty => run_in_ghostty(&commands, shell),
