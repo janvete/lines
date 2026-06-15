@@ -27,7 +27,17 @@ Data jsou běžné `.md` soubory ve složce `~/.lines`. Skupiny = podsložky.
     └── update.md
 ```
 
-### Formát `.md`
+### Konfigurace
+
+Vytvoř soubor `~/.lines/config.toml`:
+
+```toml
+terminal = "Ghostty"   # možnosti: Terminal, Ghostty, iTerm
+```
+
+Výchozí terminál je `Terminal` (macOS Terminál.app).
+
+## Formát `.md`
 
 Každá sekce začíná nadpisem `# Název příkazu`. Pod ním následují řádky příkazů.
 
