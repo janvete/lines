@@ -1,11 +1,11 @@
 use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub data_dir: PathBuf,
     pub terminal: Terminal,
+    pub shell: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -30,8 +30,12 @@ impl Terminal {
 impl Config {
     pub fn new(data_dir: Option<PathBuf>) -> Self {
         let data_dir = data_dir.unwrap_or_else(default_data_dir);
-        let terminal = load_terminal_preference(&data_dir);
-        Config { data_dir, terminal }
+        let (terminal, shell) = load_preferences(&data_dir);
+        Config {
+            data_dir,
+            terminal,
+            shell,
+        }
     }
 }
 
@@ -41,19 +45,39 @@ fn default_data_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(".lines"))
 }
 
-fn load_terminal_preference(data_dir: &Path) -> Terminal {
+fn default_shell() -> String {
+    std::env::var("SHELL")
+        .ok()
+        .and_then(|s| {
+            Path::new(&s)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(String::from)
+        })
+        .unwrap_or_else(|| "zsh".to_string())
+}
+
+fn load_preferences(data_dir: &Path) -> (Terminal, String) {
     let config_path = data_dir.join("config.toml");
     let content = match fs::read_to_string(&config_path) {
         Ok(c) => c,
-        Err(_) => return Terminal::default(),
+        Err(_) => return (Terminal::default(), default_shell()),
     };
 
     match toml::from_str::<toml::Value>(&content) {
-        Ok(value) => value
-            .get("terminal")
-            .and_then(|v| v.as_str())
-            .and_then(Terminal::from_str)
-            .unwrap_or_default(),
-        Err(_) => Terminal::default(),
+        Ok(value) => {
+            let terminal = value
+                .get("terminal")
+                .and_then(|v| v.as_str())
+                .and_then(Terminal::from_str)
+                .unwrap_or_default();
+            let shell = value
+                .get("shell")
+                .and_then(|v| v.as_str())
+                .map(String::from)
+                .unwrap_or_else(default_shell);
+            (terminal, shell)
+        }
+        Err(_) => (Terminal::default(), default_shell()),
     }
 }

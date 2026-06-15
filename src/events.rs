@@ -38,12 +38,12 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                 KeyCode::Char('r') => app.reload(),
                 KeyCode::Char('e') => {
                     if let Some(file) = app.current_file() {
-                        edit_file(&file.path, &app.terminal);
+                        edit_file(&file.path, &app.terminal, &app.shell);
                     }
                 }
                 KeyCode::Enter => {
                     if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
-                        run_section(section, file, &app.terminal, &app.data_dir);
+                        run_section(section, file, &app.terminal, &app.shell, &app.data_dir);
                     }
                 }
                 _ => {}

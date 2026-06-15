@@ -43,7 +43,7 @@ fn main() -> io::Result<()> {
         eprintln!("Nepodařilo se vytvořit datovou složku {}: {}", config.data_dir.display(), e);
     }
 
-    let app = App::new(config.data_dir, config.terminal);
+    let app = App::new(config.data_dir, config.terminal, config.shell);
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

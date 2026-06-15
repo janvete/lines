@@ -9,7 +9,13 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use crate::config::Terminal;
 use crate::parser::{CommandFile, Section};
 
-pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal, data_dir: &Path) {
+pub fn run_section(
+    section: &Section,
+    file: &CommandFile,
+    terminal: &Terminal,
+    shell: &str,
+    data_dir: &Path,
+) {
     let commands = if section.is_run_all() {
         file.sections
             .iter()
@@ -25,12 +31,12 @@ pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal, d
     }
 
     match terminal {
-        Terminal::Ghostty => run_in_ghostty(&commands),
-        _ => run_via_script(&commands, terminal, data_dir),
+        Terminal::Ghostty => run_in_ghostty(&commands, shell),
+        _ => run_via_script(&commands, terminal, shell, data_dir),
     }
 }
 
-fn run_via_script(commands: &[String], terminal: &Terminal, data_dir: &Path) {
+fn run_via_script(commands: &[String], terminal: &Terminal, shell: &str, data_dir: &Path) {
     let script = commands.join("\n");
     let run_dir = data_dir.join(".run");
     if fs::create_dir_all(&run_dir).is_err() {
@@ -57,35 +63,36 @@ fn run_via_script(commands: &[String], terminal: &Terminal, data_dir: &Path) {
     let _ = fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755));
 
     match terminal {
-        Terminal::Iterm => run_in_iterm(&script_path),
-        Terminal::Builtin => run_in_terminal_app(&script_path),
+        Terminal::Iterm => run_in_iterm(&script_path, shell),
+        Terminal::Builtin => run_in_terminal_app(&script_path, shell),
         Terminal::Ghostty => unreachable!(),
     }
 }
 
-fn run_in_ghostty(commands: &[String]) {
+fn run_in_ghostty(commands: &[String], shell: &str) {
     let script = commands.join("\n");
     let encoded = STANDARD.encode(script);
-    let shell_command = format!("echo {} | base64 -D | bash", encoded);
+    let shell_command = format!("echo {} | base64 -D | {}", encoded, shell);
 
     let _ = Command::new("open")
         .arg("-na")
         .arg("Ghostty")
         .arg("--args")
         .arg("-e")
-        .arg("bash")
+        .arg(shell)
         .arg("-c")
         .arg(shell_command)
         .spawn();
 }
 
-fn run_in_terminal_app(script_path: &Path) {
+fn run_in_terminal_app(script_path: &Path, shell: &str) {
     let path_str = script_path.to_string_lossy();
     let applescript = format!(
         r#"tell application "Terminal"
-    do script "clear; bash {}"
+    do script "clear; {} {}"
     activate
 end tell"#,
+        shell,
         escape_applescript(&path_str)
     );
 
@@ -95,16 +102,17 @@ end tell"#,
         .spawn();
 }
 
-fn run_in_iterm(script_path: &Path) {
+fn run_in_iterm(script_path: &Path, shell: &str) {
     let path_str = script_path.to_string_lossy();
     let applescript = format!(
         r#"tell application "iTerm"
     create window with default profile
     tell current session of current window
-        write text "clear; bash {}"
+        write text "clear; {} {}"
     end tell
     activate
 end tell"#,
+        shell,
         escape_applescript(&path_str)
     );
 
@@ -114,7 +122,7 @@ end tell"#,
         .spawn();
 }
 
-pub fn edit_file(path: &Path, terminal: &Terminal) {
+pub fn edit_file(path: &Path, terminal: &Terminal, shell: &str) {
     let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
 
     match terminal {
@@ -124,13 +132,14 @@ pub fn edit_file(path: &Path, terminal: &Terminal) {
                 .arg("Ghostty")
                 .arg("--args")
                 .arg("-e")
-                .arg("bash")
+                .arg(shell)
                 .arg("-c")
                 .arg(format!(
-                    "cd {} && {} {}; exec bash",
+                    "cd {} && {} {}; exec {}",
                     escape_shell(&std::env::current_dir().unwrap_or_default().to_string_lossy()),
                     escape_shell(&editor),
-                    escape_shell(&path.to_string_lossy())
+                    escape_shell(&path.to_string_lossy()),
+                    shell
                 ))
                 .spawn();
         }

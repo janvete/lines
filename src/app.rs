@@ -13,6 +13,7 @@ pub enum Focus {
 pub struct App {
     pub data_dir: PathBuf,
     pub terminal: Terminal,
+    pub shell: String,
     pub groups: Vec<Group>,
     pub group_index: usize,
     pub file_index: usize,
@@ -22,11 +23,12 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(data_dir: PathBuf, terminal: Terminal) -> Self {
+    pub fn new(data_dir: PathBuf, terminal: Terminal, shell: String) -> Self {
         let groups = load_groups(&data_dir);
         App {
             data_dir,
             terminal,
+            shell,
             groups,
             group_index: 0,
             file_index: 0,
