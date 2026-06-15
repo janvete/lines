@@ -43,7 +43,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                 }
                 KeyCode::Enter => {
                     if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
-                        run_section(section, file, &app.terminal);
+                        run_section(section, file, &app.terminal, &app.data_dir);
                     }
                 }
                 _ => {}

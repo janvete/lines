@@ -1,12 +1,13 @@
+use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::config::Terminal;
 use crate::parser::{CommandFile, Section};
 
-pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal) {
+pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal, data_dir: &Path) {
     let commands = if section.is_run_all() {
         file.sections
             .iter()
@@ -22,29 +23,41 @@ pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal) {
     }
 
     let script = build_script(&commands);
-    execute_in_terminal(&script, terminal);
+    execute_in_terminal(&script, terminal, data_dir);
 }
 
 fn build_script(commands: &[String]) -> String {
     commands.join("\n")
 }
 
-fn execute_in_terminal(script: &str, terminal: &Terminal) {
-    let tmp_dir = std::env::temp_dir();
-    let script_path = tmp_dir.join(format!("lines_run_{}.sh", random_suffix()));
+fn script_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join(".run")
+}
 
-    let mut file = match std::fs::File::create(&script_path) {
+fn execute_in_terminal(script: &str, terminal: &Terminal, data_dir: &Path) {
+    let run_dir = script_dir(data_dir);
+    if fs::create_dir_all(&run_dir).is_err() {
+        return;
+    }
+
+    let script_path = run_dir.join(format!("lines_run_{}.sh", random_suffix()));
+
+    let mut file = match fs::File::create(&script_path) {
         Ok(f) => f,
         Err(_) => return,
     };
 
-    let script_with_cleanup = format!("{}\nrm -f {}", script, escape_shell(&script_path.to_string_lossy()));
+    let script_with_cleanup = format!(
+        "{}\nrm -f {}",
+        script,
+        escape_shell(&script_path.to_string_lossy())
+    );
 
     if file.write_all(script_with_cleanup.as_bytes()).is_err() {
         return;
     }
 
-    let _ = std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755));
+    let _ = fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755));
 
     match terminal {
         Terminal::Ghostty => run_in_ghostty(&script_path),
