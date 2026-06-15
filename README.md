@@ -69,9 +69,40 @@ The default terminal is `Terminal` (macOS Terminal.app). The default shell is de
 | `←/→` or `h/l` | switch panel |
 | `Enter` | run selected command / all commands in the current terminal |
 | `o` | open selected command / all commands in a new terminal window |
+| `c` | open custom command mode for the current file |
 | `e` | open current `.md` file in `$EDITOR` |
 | `r` | reload data |
 | `q` / `Esc` | quit |
+
+## Custom command mode
+
+Press `c` on a selected file to run a custom command against specific lines from that file.
+
+For a file containing:
+
+```markdown
+# PVE1
+ssh root@host1.example.com
+
+# PVE2
+ssh root@host2.example.com
+
+# PVE3
+ssh root@host3.example.com
+```
+
+Press `c`, select lines with `Space`, type `lsblk`, and press `Enter`. `lines` will run:
+
+```bash
+ssh root@host2.example.com lsblk
+ssh root@host3.example.com lsblk
+```
+
+Use `{}` as a placeholder if your lines are just addresses:
+
+```bash
+ssh {} lsblk
+```
 
 ## History
 

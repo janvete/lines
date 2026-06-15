@@ -1,6 +1,7 @@
 mod app;
 mod commands;
 mod config;
+mod custom;
 mod events;
 mod logger;
 mod parser;

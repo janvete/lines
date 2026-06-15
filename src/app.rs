@@ -3,12 +3,74 @@ use std::path::PathBuf;
 use crate::config::Terminal;
 use crate::parser::{load_groups, CommandFile, Group, Section};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Screen {
+    Main,
+    Custom,
+}
+
 #[derive(Debug, Clone)]
 pub struct PendingCommand {
     pub group: String,
     pub file: String,
     pub section: String,
     pub commands: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CustomState {
+    pub lines: Vec<String>,
+    pub selected: Vec<bool>,
+    pub cursor: usize,
+    pub command: String,
+}
+
+impl CustomState {
+    pub fn from_file(file: &CommandFile) -> Self {
+        let mut lines = Vec::new();
+        for section in &file.sections {
+            if section.is_run_all() {
+                continue;
+            }
+            for cmd in &section.commands {
+                lines.push(cmd.clone());
+            }
+        }
+        let selected = vec![false; lines.len()];
+        CustomState {
+            lines,
+            selected,
+            cursor: 0,
+            command: String::new(),
+        }
+    }
+
+    pub fn toggle(&mut self) {
+        if let Some(s) = self.selected.get_mut(self.cursor) {
+            *s = !*s;
+        }
+    }
+
+    pub fn next(&mut self) {
+        if !self.lines.is_empty() {
+            self.cursor = (self.cursor + 1) % self.lines.len();
+        }
+    }
+
+    pub fn previous(&mut self) {
+        if !self.lines.is_empty() {
+            self.cursor = self.cursor.checked_sub(1).unwrap_or(self.lines.len() - 1);
+        }
+    }
+
+    pub fn selected_lines(&self) -> Vec<String> {
+        self.lines
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| self.selected.get(*i).copied().unwrap_or(false))
+            .map(|(_, line)| line.clone())
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +89,8 @@ pub struct App {
     pub file_index: usize,
     pub section_index: usize,
     pub focus: Focus,
+    pub screen: Screen,
+    pub custom_state: Option<CustomState>,
     pub pending_command: Option<PendingCommand>,
     pub message: Option<String>,
 }
@@ -43,6 +107,8 @@ impl App {
             file_index: 0,
             section_index: 0,
             focus: Focus::Groups,
+            screen: Screen::Main,
+            custom_state: None,
             pending_command: None,
             message: None,
         }
@@ -53,6 +119,18 @@ impl App {
         self.group_index = self.group_index.min(self.groups.len().saturating_sub(1));
         self.file_index = self.file_index.min(self.current_files().len().saturating_sub(1));
         self.section_index = self.section_index.min(self.current_sections().len().saturating_sub(1));
+    }
+
+    pub fn enter_custom(&mut self) {
+        if let Some(file) = self.current_file() {
+            self.custom_state = Some(CustomState::from_file(file));
+            self.screen = Screen::Custom;
+        }
+    }
+
+    pub fn exit_custom(&mut self) {
+        self.screen = Screen::Main;
+        self.custom_state = None;
     }
 
     pub fn current_group(&self) -> Option<&Group> {

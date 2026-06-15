@@ -6,9 +6,16 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Focus};
+use crate::app::{App, Focus, Screen};
 
 pub fn draw(f: &mut Frame, app: &App) {
+    match app.screen {
+        Screen::Main => draw_main(f, app),
+        Screen::Custom => draw_custom(f, app),
+    }
+}
+
+fn draw_main(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -33,6 +40,69 @@ pub fn draw(f: &mut Frame, app: &App) {
     draw_sections(f, app, top_chunks[2]);
     draw_preview(f, app, chunks[1]);
     draw_status(f, app, chunks[2]);
+}
+
+fn draw_custom(f: &mut Frame, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([
+            Constraint::Min(5),
+            Constraint::Length(3),
+            Constraint::Length(1),
+        ])
+        .split(f.area());
+
+    let Some(state) = app.custom_state.as_ref() else {
+        return;
+    };
+
+    let items: Vec<ListItem> = state
+        .lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            let checked = if state.selected.get(i).copied().unwrap_or(false) {
+                "[x]"
+            } else {
+                "[ ]"
+            };
+            let style = if i == state.cursor {
+                Style::default()
+                    .bg(Color::Blue)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            ListItem::new(format!("{} {}", checked, line)).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .title(" Custom command — select lines with Space ")
+            .borders(Borders::ALL),
+    );
+    f.render_widget(list, chunks[0]);
+
+    let input = Paragraph::new(state.command.as_str())
+        .block(
+            Block::default()
+                .title(" Command (use {} for selected line) ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow)),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(input, chunks[1]);
+
+    let help = "Space: toggle | j/k: move | Enter: run | Esc: back";
+    let text = match &app.message {
+        Some(msg) => Text::from(msg.as_str()),
+        None => Text::from(help),
+    };
+    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Gray));
+    f.render_widget(paragraph, chunks[2]);
 }
 
 fn draw_groups(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
@@ -173,7 +243,7 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 }
 
 fn draw_status(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
-    let help = "↑/↓ or j/k: move | →/← or h/l: panel | Enter: run | o: open in new window | e: edit | r: reload | q: quit";
+    let help = "↑/↓ or j/k: move | →/← or h/l: panel | Enter: run | o: new window | c: custom | e: edit | r: reload | q: quit";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),
