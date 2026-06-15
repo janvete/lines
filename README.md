@@ -67,7 +67,8 @@ The default terminal is `Terminal` (macOS Terminal.app). The default shell is de
 |-----|--------|
 | `↑/↓` or `j/k` | move |
 | `←/→` or `h/l` | switch panel |
-| `Enter` | run selected command / all commands |
+| `Enter` | run selected command / all commands in the current terminal |
+| `o` | open selected command / all commands in a new terminal window |
 | `e` | open current `.md` file in `$EDITOR` |
 | `r` | reload data |
 | `q` / `Esc` | quit |
