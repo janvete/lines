@@ -55,9 +55,10 @@ Create `~/.lines/config.toml`:
 
 ```toml
 terminal = "Ghostty"   # options: Terminal, Ghostty, iTerm
+shell = "zsh"          # options: any shell name, default is taken from $SHELL
 ```
 
-The default terminal is `Terminal` (macOS Terminal.app).
+The default terminal is `Terminal` (macOS Terminal.app). The default shell is detected from the `$SHELL` environment variable.
 
 ## Controls
 
