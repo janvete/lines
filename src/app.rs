@@ -99,6 +99,16 @@ impl CustomState {
     pub fn focus_lines(&mut self) {
         self.focus = CustomFocus::Lines;
     }
+
+    pub fn toggle_all(&mut self) {
+        if self.lines.is_empty() {
+            return;
+        }
+        let all_selected = self.selected.iter().all(|s| *s);
+        for s in &mut self.selected {
+            *s = !all_selected;
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

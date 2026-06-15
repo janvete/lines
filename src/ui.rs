@@ -109,7 +109,7 @@ fn draw_custom(f: &mut Frame, app: &App) {
         .wrap(Wrap { trim: true });
     f.render_widget(input, chunks[1]);
 
-    let help = "↑/↓: move | Tab: focus | Space: toggle / space | Enter: run | Esc: back";
+    let help = "↑/↓: move | Space: toggle | a: select all | Tab: focus | Enter: run | Esc: back";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),

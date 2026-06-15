@@ -134,6 +134,11 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
                 state.command.push(' ');
             }
         }
+        KeyCode::Char('a') => {
+            if state.focus == CustomFocus::Lines {
+                state.toggle_all();
+            }
+        }
         KeyCode::Backspace => {
             state.command.pop();
         }
