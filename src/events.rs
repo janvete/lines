@@ -41,9 +41,26 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                         edit_file(&file.path, &app.terminal, &app.shell);
                     }
                 }
-                KeyCode::Enter => {
+                KeyCode::Char('o') => {
                     if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
                         run_section(section, file, &app.terminal, &app.shell, &app.data_dir);
+                    }
+                }
+                KeyCode::Enter => {
+                    if let (Some(section), Some(file)) = (app.current_section(), app.current_file()) {
+                        let commands = if section.is_run_all() {
+                            file.sections
+                                .iter()
+                                .filter(|s| !s.is_run_all())
+                                .flat_map(|s| s.commands.clone())
+                                .collect()
+                        } else {
+                            section.commands.clone()
+                        };
+                        if !commands.is_empty() {
+                            app.pending_command = Some(commands);
+                            return false;
+                        }
                     }
                 }
                 _ => {}

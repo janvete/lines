@@ -19,6 +19,7 @@ pub struct App {
     pub file_index: usize,
     pub section_index: usize,
     pub focus: Focus,
+    pub pending_command: Option<Vec<String>>,
     pub message: Option<String>,
 }
 
@@ -34,6 +35,7 @@ impl App {
             file_index: 0,
             section_index: 0,
             focus: Focus::Groups,
+            pending_command: None,
             message: None,
         }
     }

@@ -7,6 +7,7 @@ mod ui;
 
 use std::io;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Duration;
 
 use clap::Parser;
@@ -40,7 +41,11 @@ fn main() -> io::Result<()> {
 
     // Ensure data directory exists
     if let Err(e) = std::fs::create_dir_all(&config.data_dir) {
-        eprintln!("Nepodařilo se vytvořit datovou složku {}: {}", config.data_dir.display(), e);
+        eprintln!(
+            "Nepodařilo se vytvořit datovou složku {}: {}",
+            config.data_dir.display(),
+            e
+        );
     }
 
     let app = App::new(config.data_dir, config.terminal, config.shell);
@@ -51,7 +56,7 @@ fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = run_app(&mut terminal, app);
+    let app = run_app(&mut terminal, app)?;
 
     disable_raw_mode()?;
     execute!(
@@ -61,14 +66,14 @@ fn main() -> io::Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        eprintln!("{}", err);
+    if let Some(commands) = app.pending_command {
+        run_in_current_terminal(&commands, &app.shell);
     }
 
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()>
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<App>
 where
     io::Error: From<<B as Backend>::Error>,
 {
@@ -80,7 +85,12 @@ where
         if let Some(event) = poll_event(tick_rate)?
             && !handle_event(&mut app, event)
         {
-            return Ok(());
+            return Ok(app);
         }
     }
+}
+
+fn run_in_current_terminal(commands: &[String], shell: &str) {
+    let script = commands.join("\n");
+    let _ = Command::new(shell).arg("-c").arg(script).status();
 }
