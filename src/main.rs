@@ -28,10 +28,10 @@ use crate::events::{handle_event, poll_event};
 
 #[derive(Parser, Debug)]
 #[command(name = "lines")]
-#[command(about = "TUI pro rychlé spouštění často používaných příkazů")]
+#[command(about = "TUI for running frequently used commands")]
 #[command(version)]
 struct Args {
-    /// Cesta k datové složce (výchozí: ~/.lines)
+    /// Path to the data directory (default: ~/.lines)
     #[arg(short, long)]
     dir: Option<PathBuf>,
 }
@@ -43,7 +43,7 @@ fn main() -> io::Result<()> {
     // Ensure data directory exists
     if let Err(e) = std::fs::create_dir_all(&config.data_dir) {
         eprintln!(
-            "Nepodařilo se vytvořit datovou složku {}: {}",
+            "Failed to create data directory {}: {}",
             config.data_dir.display(),
             e
         );

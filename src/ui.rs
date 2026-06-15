@@ -54,7 +54,7 @@ fn draw_groups(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .collect();
 
     let block = Block::default()
-        .title(" Skupiny ")
+        .title(" Groups ")
         .borders(Borders::ALL)
         .border_style(border_style(app.focus == Focus::Groups));
 
@@ -81,7 +81,7 @@ fn draw_files(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .collect();
 
     let block = Block::default()
-        .title(" Soubory ")
+        .title(" Files ")
         .borders(Borders::ALL)
         .border_style(border_style(app.focus == Focus::Files));
 
@@ -96,7 +96,7 @@ fn draw_sections(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .enumerate()
         .map(|(i, section)| {
             let label = if section.is_run_all() {
-                format!("{} (vše)", section.title)
+                format!("{} (all)", section.title)
             } else {
                 section.title.clone()
             };
@@ -113,7 +113,7 @@ fn draw_sections(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .collect();
 
     let block = Block::default()
-        .title(" Příkazy ")
+        .title(" Commands ")
         .borders(Borders::ALL)
         .border_style(border_style(app.focus == Focus::Sections));
 
@@ -125,7 +125,7 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     let text = match app.current_section() {
         Some(section) => {
             let title = if section.is_run_all() {
-                format!("{} — spustí všechny příkazy v souboru", section.title)
+                format!("{} — runs all commands in this file", section.title)
             } else {
                 section.title.clone()
             };
@@ -161,11 +161,11 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 
             Text::from(lines)
         }
-        None => Text::from("Žádný příkaz k zobrazení."),
+        None => Text::from("No command to display."),
     };
 
     let block = Block::default()
-        .title(" Náhled ")
+        .title(" Preview ")
         .borders(Borders::ALL);
 
     let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
@@ -173,7 +173,7 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 }
 
 fn draw_status(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
-    let help = "↑/↓ nebo j/k: pohyb | →/←: panel | Enter: spustit | e: editovat | r: reload | q: konec";
+    let help = "↑/↓ or j/k: move | →/← or h/l: panel | Enter: run | o: open in new window | e: edit | r: reload | q: quit";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),

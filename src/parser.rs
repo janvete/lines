@@ -157,10 +157,10 @@ mod tests {
 
     #[test]
     fn test_parse_markdown_run_all() {
-        let input = "# Spustí vše\n\n# Docker update\nssh root@192.168.53.3 /opt/mealie/update.sh\nssh root@192.168.53.5 /opt/yamtrack/update.sh\n";
+        let input = "# Run all\n\n# Docker update\nssh admin@host1.example.com /opt/app/update.sh\nssh admin@host2.example.com /opt/app/update.sh\n";
         let sections = parse_markdown(input);
         assert_eq!(sections.len(), 2);
-        assert_eq!(sections[0].title, "Spustí vše");
+        assert_eq!(sections[0].title, "Run all");
         assert!(sections[0].commands.is_empty());
         assert_eq!(sections[1].commands.len(), 2);
     }
