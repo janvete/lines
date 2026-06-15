@@ -5,7 +5,7 @@ A TUI app for quickly running frequently used commands — ideal for SSH scripts
 ## Installation
 
 ```bash
-brew install janvete/tools/lines
+brew install lines
 ```
 
 ## Usage
