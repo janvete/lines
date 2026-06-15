@@ -1,79 +1,79 @@
 # lines
 
-TUI aplikace pro rychlé spouštění často používaných příkazů — ideální pro SSH skripty, aktualizace a cokoliv, co pouštíš pravidelně z terminálu.
+A TUI app for quickly running frequently used commands — ideal for SSH scripts, updates, and anything you run regularly from the terminal.
 
-## Instalace
+## Installation
 
 ```bash
 brew install janvete/tools/lines
 ```
 
-## Použití
+## Usage
 
 ```bash
-lines              # otevře TUI
-lines --dir /cesta/k/datům   # použije jinou datovou složku
+lines              # opens the TUI
+lines --dir /path  # use a different data directory
 ```
 
-## Struktura dat
+## Data structure
 
-Data jsou běžné `.md` soubory ve složce `~/.lines`. Skupiny = podsložky.
+Data is stored as plain `.md` files in `~/.lines`. Groups are subdirectories.
 
 ```
 ~/.lines
-├── Synology
-│   └── dsmview.md
+├── Servers
+│   └── web.md
 └── Scripts
     └── update.md
 ```
 
-### Konfigurace
+### `.md` format
 
-Vytvoř soubor `~/.lines/config.toml`:
-
-```toml
-terminal = "Ghostty"   # možnosti: Terminal, Ghostty, iTerm
-```
-
-Výchozí terminál je `Terminal` (macOS Terminál.app).
-
-## Formát `.md`
-
-Každá sekce začíná nadpisem `# Název příkazu`. Pod ním následují řádky příkazů.
+Each section starts with `# Command name`. Command lines follow the heading.
 
 ```markdown
-# Sysel DSM
-dsmview ssh root@192.168.40.15
+# Web server
+ssh admin@web.example.com
 
-# Johy DSM
-dsmview ssh root@192.168.51.3
+# Database
+ssh admin@db.example.com
 ```
 
-Sekce bez příkazů znamená "spustit všechny příkazy v tomto souboru".
+A section without command lines means "run all commands in this file".
 
 ```markdown
-# Spustí vše
+# Run all
 
 # Docker update
-ssh root@192.168.53.3 /opt/mealie/update.sh
-ssh root@192.168.53.5 /opt/yamtrack/update.sh
+ssh admin@host1.example.com /opt/app/update.sh
+ssh admin@host2.example.com /opt/app/update.sh
 ```
 
-## Ovládání
+## Configuration
 
-| Klávesa | Akce |
-|---------|------|
-| `↑/↓` nebo `j/k` | pohyb v seznamu |
-| `←/→` nebo `h/l` | přepínání panelů |
-| `Enter` | spustí vybraný příkaz / všechny příkazy |
-| `e` | otevře aktuální `.md` soubor v `$EDITOR` |
-| `r` | znovu načte data ze složky |
-| `q` nebo `Esc` | ukončí aplikaci |
+Create `~/.lines/config.toml`:
 
-## Zálohování
+```toml
+terminal = "Ghostty"   # options: Terminal, Ghostty, iTerm
+```
 
-Celá datová složka `~/.lines` je obyčejný text — stačí ji zkopírovat na disk, do Gitu nebo iCloudu. Na novém Macu ji přeneseš a `lines` ji rovnou načte.
+The default terminal is `Terminal` (macOS Terminal.app).
 
-## Licence
+## Controls
+
+| Key | Action |
+|-----|--------|
+| `↑/↓` or `j/k` | move |
+| `←/→` or `h/l` | switch panel |
+| `Enter` | run selected command / all commands |
+| `e` | open current `.md` file in `$EDITOR` |
+| `r` | reload data |
+| `q` / `Esc` | quit |
+
+## Backup
+
+The entire `~/.lines` folder is plain text. Copy it to a disk, Git repo, or iCloud. On a new Mac, move it to the same location and `lines` works immediately.
+
+## License
 
 MIT

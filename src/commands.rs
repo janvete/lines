@@ -1,8 +1,10 @@
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
+
+use base64::{engine::general_purpose::STANDARD, Engine};
 
 use crate::config::Terminal;
 use crate::parser::{CommandFile, Section};
@@ -22,20 +24,15 @@ pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal, d
         return;
     }
 
-    let script = build_script(&commands);
-    execute_in_terminal(&script, terminal, data_dir);
+    match terminal {
+        Terminal::Ghostty => run_in_ghostty(&commands),
+        _ => run_via_script(&commands, terminal, data_dir),
+    }
 }
 
-fn build_script(commands: &[String]) -> String {
-    commands.join("\n")
-}
-
-fn script_dir(data_dir: &Path) -> PathBuf {
-    data_dir.join(".run")
-}
-
-fn execute_in_terminal(script: &str, terminal: &Terminal, data_dir: &Path) {
-    let run_dir = script_dir(data_dir);
+fn run_via_script(commands: &[String], terminal: &Terminal, data_dir: &Path) {
+    let script = commands.join("\n");
+    let run_dir = data_dir.join(".run");
     if fs::create_dir_all(&run_dir).is_err() {
         return;
     }
@@ -60,10 +57,26 @@ fn execute_in_terminal(script: &str, terminal: &Terminal, data_dir: &Path) {
     let _ = fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755));
 
     match terminal {
-        Terminal::Ghostty => run_in_ghostty(&script_path),
         Terminal::Iterm => run_in_iterm(&script_path),
         Terminal::Builtin => run_in_terminal_app(&script_path),
+        Terminal::Ghostty => unreachable!(),
     }
+}
+
+fn run_in_ghostty(commands: &[String]) {
+    let script = commands.join("\n");
+    let encoded = STANDARD.encode(script);
+    let shell_command = format!("echo {} | base64 -D | bash", encoded);
+
+    let _ = Command::new("open")
+        .arg("-na")
+        .arg("Ghostty")
+        .arg("--args")
+        .arg("-e")
+        .arg("bash")
+        .arg("-c")
+        .arg(shell_command)
+        .spawn();
 }
 
 fn run_in_terminal_app(script_path: &Path) {
@@ -79,18 +92,6 @@ end tell"#,
     let _ = Command::new("osascript")
         .arg("-e")
         .arg(applescript)
-        .spawn();
-}
-
-fn run_in_ghostty(script_path: &Path) {
-    let path_str = script_path.to_string_lossy();
-    let _ = Command::new("open")
-        .arg("-na")
-        .arg("Ghostty")
-        .arg("--args")
-        .arg("-e")
-        .arg("bash")
-        .arg(path_str.as_ref())
         .spawn();
 }
 
