@@ -27,6 +27,7 @@ use crate::events::{handle_event, poll_event};
 #[derive(Parser, Debug)]
 #[command(name = "lines")]
 #[command(about = "TUI pro rychlé spouštění často používaných příkazů")]
+#[command(version)]
 struct Args {
     /// Cesta k datové složce (výchozí: ~/.lines)
     #[arg(short, long)]
