@@ -18,7 +18,7 @@ pub fn build_commands(state: &CustomState) -> Vec<String> {
             if command.contains("{}") {
                 command.replace("{}", line)
             } else {
-                format!("{} {}", line, command)
+                format!("{} \"{}\"", line, command.replace('"', "\\\""))
             }
         })
         .collect()
@@ -54,7 +54,7 @@ mod tests {
         );
         assert_eq!(
             build_commands(&state),
-            vec!["ssh root@ip2 lsblk", "ssh root@ip3 lsblk"]
+            vec!["ssh root@ip2 \"lsblk\"", "ssh root@ip3 \"lsblk\""]
         );
     }
 
