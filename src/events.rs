@@ -2,7 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use std::io;
 use std::time::Duration;
 
-use crate::app::{App, PendingCommand, Screen};
+use crate::app::{App, CustomFocus, PendingCommand, Screen};
 use crate::commands::{edit_file, run_section};
 use crate::custom::build_commands;
 
@@ -42,10 +42,10 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
 fn handle_main_event(app: &mut App, key: event::KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => return false,
-        KeyCode::Char('j') | KeyCode::Down => app.next(),
-        KeyCode::Char('k') | KeyCode::Up => app.previous(),
-        KeyCode::Char('h') | KeyCode::Left => app.focus_left(),
-        KeyCode::Char('l') | KeyCode::Right => app.focus_right(),
+        KeyCode::Down => app.next(),
+        KeyCode::Up => app.previous(),
+        KeyCode::Left => app.focus_left(),
+        KeyCode::Right => app.focus_right(),
         KeyCode::Char('r') => app.reload(),
         KeyCode::Char('e') => {
             if let Some(file) = app.current_file() {
@@ -110,24 +110,49 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
         KeyCode::Esc | KeyCode::Char('q') => {
             app.exit_custom();
         }
-        KeyCode::Char('j') | KeyCode::Down => state.next(),
-        KeyCode::Char('k') | KeyCode::Up => state.previous(),
-        KeyCode::Char(' ') => state.toggle(),
+        KeyCode::Tab => {
+            if state.focus == CustomFocus::Lines {
+                state.focus_input();
+            } else {
+                state.focus_lines();
+            }
+        }
+        KeyCode::Down => {
+            if state.focus == CustomFocus::Lines {
+                state.next();
+            }
+        }
+        KeyCode::Up => {
+            if state.focus == CustomFocus::Lines {
+                state.previous();
+            }
+        }
+        KeyCode::Char(' ') => {
+            if state.focus == CustomFocus::Lines {
+                state.toggle();
+            } else {
+                state.command.push(' ');
+            }
+        }
         KeyCode::Backspace => {
             state.command.pop();
         }
         KeyCode::Enter => {
-            let commands = build_commands(state);
-            if !commands.is_empty()
-                && let (Some(file), Some(group)) = (app.current_file(), app.current_group())
-            {
-                app.pending_command = Some(PendingCommand {
-                    group: group.name.clone(),
-                    file: file.name.clone(),
-                    section: "custom".to_string(),
-                    commands,
-                });
-                return false;
+            if state.focus == CustomFocus::Input {
+                let commands = build_commands(state);
+                if !commands.is_empty()
+                    && let (Some(file), Some(group)) = (app.current_file(), app.current_group())
+                {
+                    app.pending_command = Some(PendingCommand {
+                        group: group.name.clone(),
+                        file: file.name.clone(),
+                        section: "custom".to_string(),
+                        commands,
+                    });
+                    return false;
+                }
+            } else {
+                state.focus_input();
             }
         }
         KeyCode::Char(c) => {

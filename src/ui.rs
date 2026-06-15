@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Focus, Screen};
+use crate::app::{App, CustomFocus, Focus, Screen};
 
 pub fn draw(f: &mut Frame, app: &App) {
     match app.screen {
@@ -67,23 +67,32 @@ fn draw_custom(f: &mut Frame, app: &App) {
             } else {
                 "[ ]"
             };
-            let style = if i == state.cursor {
-                Style::default()
+            let label = format!(
+                "{} {} — {}",
+                checked,
+                line.command,
+                line.section
+            );
+            let mut style = Style::default();
+            if i == state.cursor && state.focus == CustomFocus::Lines {
+                style = style
                     .bg(Color::Blue)
                     .fg(Color::Black)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            ListItem::new(format!("{} {}", checked, line)).style(style)
+                    .add_modifier(Modifier::BOLD);
+            }
+            ListItem::new(label).style(style)
         })
         .collect();
 
-    let list = List::new(items).block(
-        Block::default()
-            .title(" Custom command — select lines with Space ")
-            .borders(Borders::ALL),
-    );
+    let list_block = Block::default()
+        .title(" Custom command — select lines with Space ")
+        .borders(Borders::ALL)
+        .border_style(if state.focus == CustomFocus::Lines {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        });
+    let list = List::new(items).block(list_block);
     f.render_widget(list, chunks[0]);
 
     let input = Paragraph::new(state.command.as_str())
@@ -91,12 +100,16 @@ fn draw_custom(f: &mut Frame, app: &App) {
             Block::default()
                 .title(" Command (use {} for selected line) ")
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Yellow)),
+                .border_style(if state.focus == CustomFocus::Input {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                }),
         )
         .wrap(Wrap { trim: true });
     f.render_widget(input, chunks[1]);
 
-    let help = "Space: toggle | j/k: move | Enter: run | Esc: back";
+    let help = "↑/↓: move | Tab: focus | Space: toggle / space | Enter: run | Esc: back";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),
@@ -243,7 +256,7 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 }
 
 fn draw_status(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
-    let help = "↑/↓ or j/k: move | →/← or h/l: panel | Enter: run | o: new window | c: custom | e: edit | r: reload | q: quit";
+    let help = "↑/↓: move | →/←: panel | Enter: run | o: new window | c: custom | e: edit | r: reload | q: quit";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),

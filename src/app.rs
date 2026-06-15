@@ -17,11 +17,24 @@ pub struct PendingCommand {
     pub commands: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CustomFocus {
+    Lines,
+    Input,
+}
+
+#[derive(Debug, Clone)]
+pub struct CustomLine {
+    pub section: String,
+    pub command: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct CustomState {
-    pub lines: Vec<String>,
+    pub lines: Vec<CustomLine>,
     pub selected: Vec<bool>,
     pub cursor: usize,
+    pub focus: CustomFocus,
     pub command: String,
 }
 
@@ -33,7 +46,10 @@ impl CustomState {
                 continue;
             }
             for cmd in &section.commands {
-                lines.push(cmd.clone());
+                lines.push(CustomLine {
+                    section: section.title.clone(),
+                    command: cmd.clone(),
+                });
             }
         }
         let selected = vec![false; lines.len()];
@@ -41,24 +57,28 @@ impl CustomState {
             lines,
             selected,
             cursor: 0,
+            focus: CustomFocus::Lines,
             command: String::new(),
         }
     }
 
     pub fn toggle(&mut self) {
+        if self.focus != CustomFocus::Lines {
+            return;
+        }
         if let Some(s) = self.selected.get_mut(self.cursor) {
             *s = !*s;
         }
     }
 
     pub fn next(&mut self) {
-        if !self.lines.is_empty() {
+        if !self.lines.is_empty() && self.focus == CustomFocus::Lines {
             self.cursor = (self.cursor + 1) % self.lines.len();
         }
     }
 
     pub fn previous(&mut self) {
-        if !self.lines.is_empty() {
+        if !self.lines.is_empty() && self.focus == CustomFocus::Lines {
             self.cursor = self.cursor.checked_sub(1).unwrap_or(self.lines.len() - 1);
         }
     }
@@ -68,8 +88,16 @@ impl CustomState {
             .iter()
             .enumerate()
             .filter(|(i, _)| self.selected.get(*i).copied().unwrap_or(false))
-            .map(|(_, line)| line.clone())
+            .map(|(_, line)| line.command.clone())
             .collect()
+    }
+
+    pub fn focus_input(&mut self) {
+        self.focus = CustomFocus::Input;
+    }
+
+    pub fn focus_lines(&mut self) {
+        self.focus = CustomFocus::Lines;
     }
 }
 
