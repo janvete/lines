@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::config::Terminal;
 use crate::parser::{load_groups, CommandFile, Group, Section};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,7 @@ pub enum Focus {
 
 pub struct App {
     pub data_dir: PathBuf,
+    pub terminal: Terminal,
     pub groups: Vec<Group>,
     pub group_index: usize,
     pub file_index: usize,
@@ -20,10 +22,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub fn new(data_dir: PathBuf, terminal: Terminal) -> Self {
         let groups = load_groups(&data_dir);
         App {
             data_dir,
+            terminal,
             groups,
             group_index: 0,
             file_index: 0,

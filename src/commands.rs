@@ -3,9 +3,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
 
+use crate::config::Terminal;
 use crate::parser::{CommandFile, Section};
 
-pub fn run_section(section: &Section, file: &CommandFile) {
+pub fn run_section(section: &Section, file: &CommandFile, terminal: &Terminal) {
     let commands = if section.is_run_all() {
         file.sections
             .iter()
@@ -21,14 +22,14 @@ pub fn run_section(section: &Section, file: &CommandFile) {
     }
 
     let script = build_script(&commands);
-    execute_in_terminal(&script);
+    execute_in_terminal(&script, terminal);
 }
 
 fn build_script(commands: &[String]) -> String {
     commands.join("\n")
 }
 
-fn execute_in_terminal(script: &str) {
+fn execute_in_terminal(script: &str, terminal: &Terminal) {
     let tmp_dir = std::env::temp_dir();
     let script_path = tmp_dir.join(format!("lines_run_{}.sh", random_suffix()));
 
@@ -37,22 +38,28 @@ fn execute_in_terminal(script: &str) {
         Err(_) => return,
     };
 
-    if file.write_all(script.as_bytes()).is_err() {
+    let script_with_cleanup = format!("{}\nrm -f {}", script, escape_shell(&script_path.to_string_lossy()));
+
+    if file.write_all(script_with_cleanup.as_bytes()).is_err() {
         return;
     }
 
-    // Best-effort attempt to make executable; Terminal.app can run `bash script.sh` anyway.
     let _ = std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755));
 
-    let path_str = script_path.to_string_lossy();
+    match terminal {
+        Terminal::Ghostty => run_in_ghostty(&script_path),
+        Terminal::Iterm => run_in_iterm(&script_path),
+        Terminal::Builtin => run_in_terminal_app(&script_path),
+    }
+}
 
-    // Open a new Terminal.app window and run the script.
+fn run_in_terminal_app(script_path: &Path) {
+    let path_str = script_path.to_string_lossy();
     let applescript = format!(
         r#"tell application "Terminal"
-    do script "clear; bash {}; rm {}"
+    do script "clear; bash {}"
     activate
 end tell"#,
-        escape_applescript(&path_str),
         escape_applescript(&path_str)
     );
 
@@ -62,8 +69,85 @@ end tell"#,
         .spawn();
 }
 
+fn run_in_ghostty(script_path: &Path) {
+    let path_str = script_path.to_string_lossy();
+    let _ = Command::new("open")
+        .arg("-na")
+        .arg("Ghostty")
+        .arg("--args")
+        .arg("-e")
+        .arg("bash")
+        .arg(path_str.as_ref())
+        .spawn();
+}
+
+fn run_in_iterm(script_path: &Path) {
+    let path_str = script_path.to_string_lossy();
+    let applescript = format!(
+        r#"tell application "iTerm"
+    create window with default profile
+    tell current session of current window
+        write text "clear; bash {}"
+    end tell
+    activate
+end tell"#,
+        escape_applescript(&path_str)
+    );
+
+    let _ = Command::new("osascript")
+        .arg("-e")
+        .arg(applescript)
+        .spawn();
+}
+
+pub fn edit_file(path: &Path, terminal: &Terminal) {
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
+
+    match terminal {
+        Terminal::Ghostty => {
+            let _ = Command::new("open")
+                .arg("-na")
+                .arg("Ghostty")
+                .arg("--args")
+                .arg("-e")
+                .arg("bash")
+                .arg("-c")
+                .arg(format!(
+                    "cd {} && {} {}; exec bash",
+                    escape_shell(&std::env::current_dir().unwrap_or_default().to_string_lossy()),
+                    escape_shell(&editor),
+                    escape_shell(&path.to_string_lossy())
+                ))
+                .spawn();
+        }
+        _ => {
+            let app = match terminal {
+                Terminal::Iterm => "iTerm",
+                _ => "Terminal",
+            };
+            let _ = Command::new("osascript")
+                .arg("-e")
+                .arg(format!(
+                    r#"tell application "{}"
+    do script "cd {}; {} {}; exit"
+    activate
+end tell"#,
+                    app,
+                    escape_applescript(&std::env::current_dir().unwrap_or_default().to_string_lossy()),
+                    escape_applescript(&editor),
+                    escape_applescript(&path.to_string_lossy())
+                ))
+                .spawn();
+        }
+    }
+}
+
 fn escape_applescript(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn escape_shell(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"").replace('\'', "'\"'\"'")
 }
 
 fn random_suffix() -> u64 {
@@ -71,20 +155,4 @@ fn random_suffix() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
-}
-
-pub fn edit_file(path: &Path) {
-    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
-    let _ = Command::new("osascript")
-        .arg("-e")
-        .arg(format!(
-            r#"tell application "Terminal"
-    do script "cd {}; {} {}; exit"
-    activate
-end tell"#,
-            escape_applescript(&std::env::current_dir().unwrap_or_default().to_string_lossy()),
-            escape_applescript(&editor),
-            escape_applescript(&path.to_string_lossy())
-        ))
-        .spawn();
 }
