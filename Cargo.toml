@@ -2,6 +2,13 @@
 name = "lines"
 version = "0.1.0"
 edition = "2024"
+authors = ["janvete"]
+description = "TUI for running frequently used commands"
+license = "MIT"
+repository = "https://github.com/janvete/lines"
+homepage = "https://github.com/janvete/lines"
+keywords = ["cli", "tui", "ssh", "commands"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 base64 = "0.22.1"
@@ -12,3 +19,15 @@ directories = "6.0.0"
 ratatui = "0.30.1"
 toml = "1.1.2"
 walkdir = "2.5.0"
+
+
+[package.metadata.deb]
+maintainer = "janvete <jan.vete@example.com>"
+copyright = "2026, janvete"
+extended-description = "TUI application for quickly running frequently used commands from markdown files."
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/lines", "usr/bin/lines", "755"],
+    ["README.md", "usr/share/doc/lines/README.md", "644"],
+]
