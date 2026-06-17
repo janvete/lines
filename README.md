@@ -68,6 +68,7 @@ The default terminal is `Terminal` (macOS Terminal.app). The default shell is de
 | `↑/↓` or `j/k` | move |
 | `←/→` or `h/l` | switch panel |
 | `Enter` | run selected command / all commands in the current terminal |
+| `/` | open global search across all commands |
 | `o` | open selected command / all commands in a new terminal window |
 | `c` | open custom command mode for the current file |
 | `e` | open current `.md` file in `$EDITOR` |
@@ -103,6 +104,10 @@ Use `{}` as a placeholder if your lines are just addresses:
 ```bash
 ssh {} lsblk
 ```
+
+## Global search
+
+Press `/` to search across all commands, files, groups, and section names. Type your query, use `↑/↓` to select a result, and press `Enter` to run it.
 
 ## History
 
