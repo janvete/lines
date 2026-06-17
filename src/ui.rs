@@ -12,6 +12,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     match app.screen {
         Screen::Main => draw_main(f, app),
         Screen::Custom => draw_custom(f, app),
+        Screen::Search => draw_search(f, app),
     }
 }
 
@@ -116,6 +117,70 @@ fn draw_custom(f: &mut Frame, app: &App) {
     };
     let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Gray));
     f.render_widget(paragraph, chunks[2]);
+}
+
+fn draw_search(f: &mut Frame, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(5),
+            Constraint::Length(1),
+        ])
+        .split(f.area());
+
+    let Some(state) = app.search_state.as_ref() else {
+        return;
+    };
+
+    let input = Paragraph::new(state.query.as_str())
+        .block(
+            Block::default()
+                .title(" Search ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow)),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(input, chunks[0]);
+
+    let items: Vec<ListItem> = state
+        .results
+        .iter()
+        .enumerate()
+        .map(|(i, result)| {
+            let style = if i == state.cursor {
+                Style::default()
+                    .bg(Color::Blue)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            ListItem::new(format!(
+                "[{}] {} — {}",
+                result.group, result.file, result.section
+            ))
+            .style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .title(format!(" Results ({}) ", state.results.len()))
+            .borders(Borders::ALL),
+    );
+    f.render_widget(list, chunks[1]);
+
+    let preview_text = state
+        .results
+        .get(state.cursor)
+        .map(|r| Text::from(r.command.as_str()))
+        .unwrap_or_else(|| Text::from("No result selected."));
+    let preview = Paragraph::new(preview_text)
+        .block(Block::default().title(" Preview ").borders(Borders::ALL))
+        .wrap(Wrap { trim: true });
+    f.render_widget(preview, chunks[2]);
 }
 
 fn draw_groups(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
@@ -256,7 +321,7 @@ fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 }
 
 fn draw_status(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
-    let help = "↑/↓: move | →/←: panel | Enter: run | o: new window | c: custom | e: edit | r: reload | q: quit";
+    let help = "↑/↓: move | →/←: panel | Enter: run | /: search | o: new window | c: custom | e: edit | r: reload | q: quit";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),

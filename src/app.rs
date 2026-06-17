@@ -7,6 +7,22 @@ use crate::parser::{load_groups, CommandFile, Group, Section};
 pub enum Screen {
     Main,
     Custom,
+    Search,
+}
+
+#[derive(Debug, Clone)]
+pub struct SearchResult {
+    pub group: String,
+    pub file: String,
+    pub section: String,
+    pub command: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SearchState {
+    pub query: String,
+    pub results: Vec<SearchResult>,
+    pub cursor: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +145,7 @@ pub struct App {
     pub focus: Focus,
     pub screen: Screen,
     pub custom_state: Option<CustomState>,
+    pub search_state: Option<SearchState>,
     pub pending_command: Option<PendingCommand>,
     pub message: Option<String>,
 }
@@ -147,6 +164,7 @@ impl App {
             focus: Focus::Groups,
             screen: Screen::Main,
             custom_state: None,
+            search_state: None,
             pending_command: None,
             message: None,
         }
@@ -169,6 +187,37 @@ impl App {
     pub fn exit_custom(&mut self) {
         self.screen = Screen::Main;
         self.custom_state = None;
+    }
+
+    pub fn enter_search(&mut self) {
+        let results = build_search_index(&self.groups);
+        self.search_state = Some(SearchState {
+            query: String::new(),
+            results,
+            cursor: 0,
+        });
+        self.screen = Screen::Search;
+    }
+
+    pub fn exit_search(&mut self) {
+        self.screen = Screen::Main;
+        self.search_state = None;
+    }
+
+    pub fn update_search(&mut self) {
+        if let Some(state) = self.search_state.as_mut() {
+            let query = state.query.to_lowercase();
+            state.results = build_search_index(&self.groups)
+                .into_iter()
+                .filter(|r| {
+                    r.group.to_lowercase().contains(&query)
+                        || r.file.to_lowercase().contains(&query)
+                        || r.section.to_lowercase().contains(&query)
+                        || r.command.to_lowercase().contains(&query)
+                })
+                .collect();
+            state.cursor = state.cursor.min(state.results.len().saturating_sub(1));
+        }
     }
 
     pub fn current_group(&self) -> Option<&Group> {
@@ -262,4 +311,26 @@ impl App {
             Focus::Sections => Focus::Files,
         };
     }
+}
+
+fn build_search_index(groups: &[Group]) -> Vec<SearchResult> {
+    let mut results = Vec::new();
+    for group in groups {
+        for file in &group.files {
+            for section in &file.sections {
+                if section.is_run_all() {
+                    continue;
+                }
+                for command in &section.commands {
+                    results.push(SearchResult {
+                        group: group.name.clone(),
+                        file: file.name.clone(),
+                        section: section.title.clone(),
+                        command: command.clone(),
+                    });
+                }
+            }
+        }
+    }
+    results
 }

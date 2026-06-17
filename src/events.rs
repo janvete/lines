@@ -34,6 +34,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
             match app.screen {
                 Screen::Main => handle_main_event(app, key),
                 Screen::Custom => handle_custom_event(app, key),
+                Screen::Search => handle_search_event(app, key),
             }
         }
     }
@@ -54,6 +55,9 @@ fn handle_main_event(app: &mut App, key: event::KeyEvent) -> bool {
         }
         KeyCode::Char('c') => {
             app.enter_custom();
+        }
+        KeyCode::Char('/') => {
+            app.enter_search();
         }
         KeyCode::Char('o') => {
             if let (Some(section), Some(file), Some(group)) =
@@ -162,6 +166,50 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
         }
         KeyCode::Char(c) => {
             state.command.push(c);
+        }
+        _ => {}
+    }
+    true
+}
+
+fn handle_search_event(app: &mut App, key: event::KeyEvent) -> bool {
+    let Some(state) = app.search_state.as_mut() else {
+        app.exit_search();
+        return true;
+    };
+
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            app.exit_search();
+        }
+        KeyCode::Down => {
+            if !state.results.is_empty() {
+                state.cursor = (state.cursor + 1) % state.results.len();
+            }
+        }
+        KeyCode::Up => {
+            if !state.results.is_empty() {
+                state.cursor = state.cursor.checked_sub(1).unwrap_or(state.results.len() - 1);
+            }
+        }
+        KeyCode::Backspace => {
+            state.query.pop();
+            app.update_search();
+        }
+        KeyCode::Enter => {
+            if let Some(result) = state.results.get(state.cursor) {
+                app.pending_command = Some(PendingCommand {
+                    group: result.group.clone(),
+                    file: result.file.clone(),
+                    section: result.section.clone(),
+                    commands: vec![result.command.clone()],
+                });
+                return false;
+            }
+        }
+        KeyCode::Char(c) => {
+            state.query.push(c);
+            app.update_search();
         }
         _ => {}
     }
