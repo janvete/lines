@@ -49,7 +49,7 @@ fn draw_custom(f: &mut Frame, app: &App) {
         .margin(1)
         .constraints([
             Constraint::Min(5),
-            Constraint::Length(3),
+            Constraint::Length(5),
             Constraint::Length(1),
         ])
         .split(f.area());
