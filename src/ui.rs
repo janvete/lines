@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::{App, CustomFocus, Focus, Screen};
 
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     match app.screen {
         Screen::Main => draw_main(f, app),
         Screen::Custom => draw_custom(f, app),
@@ -16,7 +16,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     }
 }
 
-fn draw_main(f: &mut Frame, app: &App) {
+fn draw_main(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -43,7 +43,7 @@ fn draw_main(f: &mut Frame, app: &App) {
     draw_status(f, app, chunks[2]);
 }
 
-fn draw_custom(f: &mut Frame, app: &App) {
+fn draw_custom(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -54,7 +54,7 @@ fn draw_custom(f: &mut Frame, app: &App) {
         ])
         .split(f.area());
 
-    let Some(state) = app.custom_state.as_ref() else {
+    let Some(state) = app.custom_state.as_mut() else {
         return;
     };
 
@@ -94,7 +94,8 @@ fn draw_custom(f: &mut Frame, app: &App) {
             Style::default().fg(Color::DarkGray)
         });
     let list = List::new(items).block(list_block);
-    f.render_widget(list, chunks[0]);
+    state.list_state.select(Some(state.cursor));
+    f.render_stateful_widget(list, chunks[0], &mut state.list_state);
 
     let input = Paragraph::new(state.command.as_str())
         .block(
@@ -119,7 +120,7 @@ fn draw_custom(f: &mut Frame, app: &App) {
     f.render_widget(paragraph, chunks[2]);
 }
 
-fn draw_search(f: &mut Frame, app: &App) {
+fn draw_search(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -130,7 +131,7 @@ fn draw_search(f: &mut Frame, app: &App) {
         ])
         .split(f.area());
 
-    let Some(state) = app.search_state.as_ref() else {
+    let Some(state) = app.search_state.as_mut() else {
         return;
     };
 
@@ -170,7 +171,8 @@ fn draw_search(f: &mut Frame, app: &App) {
             .title(format!(" Results ({}) ", state.results.len()))
             .borders(Borders::ALL),
     );
-    f.render_widget(list, chunks[1]);
+    state.list_state.select(Some(state.cursor));
+    f.render_stateful_widget(list, chunks[1], &mut state.list_state);
 
     let preview_text = state
         .results
@@ -183,7 +185,7 @@ fn draw_search(f: &mut Frame, app: &App) {
     f.render_widget(preview, chunks[2]);
 }
 
-fn draw_groups(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
+fn draw_groups(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     let items: Vec<ListItem> = app
         .groups
         .iter()
@@ -207,10 +209,11 @@ fn draw_groups(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .border_style(border_style(app.focus == Focus::Groups));
 
     let list = List::new(items).block(block);
-    f.render_widget(list, area);
+    app.group_list_state.select(Some(app.group_index));
+    f.render_stateful_widget(list, area, &mut app.group_list_state);
 }
 
-fn draw_files(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
+fn draw_files(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     let items: Vec<ListItem> = app
         .current_files()
         .iter()
@@ -234,10 +237,11 @@ fn draw_files(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .border_style(border_style(app.focus == Focus::Files));
 
     let list = List::new(items).block(block);
-    f.render_widget(list, area);
+    app.file_list_state.select(Some(app.file_index));
+    f.render_stateful_widget(list, area, &mut app.file_list_state);
 }
 
-fn draw_sections(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
+fn draw_sections(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     let items: Vec<ListItem> = app
         .current_sections()
         .iter()
@@ -266,7 +270,8 @@ fn draw_sections(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
         .border_style(border_style(app.focus == Focus::Sections));
 
     let list = List::new(items).block(block);
-    f.render_widget(list, area);
+    app.section_list_state.select(Some(app.section_index));
+    f.render_stateful_widget(list, area, &mut app.section_list_state);
 }
 
 fn draw_preview(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {

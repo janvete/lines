@@ -1,6 +1,6 @@
 [package]
 name = "lines"
-version = "0.1.15"
+version = "0.1.16"
 edition = "2024"
 authors = ["janvete"]
 description = "TUI for running frequently used commands"

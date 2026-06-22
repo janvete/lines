@@ -90,7 +90,7 @@ where
     let tick_rate = Duration::from_millis(100);
 
     loop {
-        terminal.draw(|f| ui::draw(f, &app))?;
+        terminal.draw(|f| ui::draw(f, &mut app))?;
 
         if let Some(event) = poll_event(tick_rate)?
             && !handle_event(&mut app, event)

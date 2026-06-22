@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use ratatui::widgets::ListState;
+
 use crate::config::Terminal;
 use crate::parser::{load_groups, CommandFile, Group, Section};
 
@@ -23,6 +25,7 @@ pub struct SearchState {
     pub query: String,
     pub results: Vec<SearchResult>,
     pub cursor: usize,
+    pub list_state: ListState,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +55,7 @@ pub struct CustomState {
     pub cursor: usize,
     pub focus: CustomFocus,
     pub command: String,
+    pub list_state: ListState,
 }
 
 impl CustomState {
@@ -69,12 +73,15 @@ impl CustomState {
             }
         }
         let selected = vec![false; lines.len()];
+        let mut list_state = ListState::default();
+        list_state.select(Some(0));
         CustomState {
             lines,
             selected,
             cursor: 0,
             focus: CustomFocus::Lines,
             command: String::new(),
+            list_state,
         }
     }
 
@@ -148,11 +155,20 @@ pub struct App {
     pub search_state: Option<SearchState>,
     pub pending_command: Option<PendingCommand>,
     pub message: Option<String>,
+    pub group_list_state: ListState,
+    pub file_list_state: ListState,
+    pub section_list_state: ListState,
 }
 
 impl App {
     pub fn new(data_dir: PathBuf, terminal: Terminal, shell: String) -> Self {
         let groups = load_groups(&data_dir);
+        let mut group_list_state = ListState::default();
+        let mut file_list_state = ListState::default();
+        let mut section_list_state = ListState::default();
+        group_list_state.select(Some(0));
+        file_list_state.select(Some(0));
+        section_list_state.select(Some(0));
         App {
             data_dir,
             terminal,
@@ -167,6 +183,9 @@ impl App {
             search_state: None,
             pending_command: None,
             message: None,
+            group_list_state,
+            file_list_state,
+            section_list_state,
         }
     }
 
@@ -191,10 +210,13 @@ impl App {
 
     pub fn enter_search(&mut self) {
         let results = build_search_index(&self.groups);
+        let mut list_state = ListState::default();
+        list_state.select(Some(0));
         self.search_state = Some(SearchState {
             query: String::new(),
             results,
             cursor: 0,
+            list_state,
         });
         self.screen = Screen::Search;
     }

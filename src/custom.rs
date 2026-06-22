@@ -30,6 +30,8 @@ mod tests {
     use crate::app::{CustomLine, CustomState};
 
     fn make_state(lines: Vec<&str>, selected: Vec<bool>, command: &str) -> CustomState {
+        let mut list_state = ratatui::widgets::ListState::default();
+        list_state.select(Some(0));
         CustomState {
             lines: lines
                 .into_iter()
@@ -42,6 +44,7 @@ mod tests {
             cursor: 0,
             focus: crate::app::CustomFocus::Lines,
             command: command.to_string(),
+            list_state,
         }
     }
 
