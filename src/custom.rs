@@ -2,7 +2,9 @@ use crate::app::CustomState;
 
 pub fn build_commands(state: &CustomState) -> Vec<String> {
     let command = state.command.trim();
-    if command.is_empty() {
+    let pre_command = state.pre_command.trim();
+
+    if command.is_empty() && pre_command.is_empty() {
         return Vec::new();
     }
 
@@ -11,7 +13,6 @@ pub fn build_commands(state: &CustomState) -> Vec<String> {
         return Vec::new();
     }
 
-    let pre_command = state.pre_command.trim();
     let prefix = if pre_command.is_empty() {
         String::new()
     } else {
@@ -22,7 +23,9 @@ pub fn build_commands(state: &CustomState) -> Vec<String> {
         .iter()
         .map(|line| {
             let line = line.trim();
-            let built = if command.contains("{}") {
+            let built = if command.is_empty() {
+                line.to_string()
+            } else if command.contains("{}") {
                 command.replace("{}", line)
             } else {
                 format!("{} \"{}\"", line, command.replace('"', "\\\""))
@@ -115,5 +118,11 @@ mod tests {
             build_commands(&state),
             vec!["lview ssh root@ip1 lsblk", "lview ssh root@ip2 lsblk"]
         );
+    }
+
+    #[test]
+    fn test_build_commands_pre_command_only() {
+        let state = make_state(vec!["ssh root@ip1", "ssh root@ip2"], vec![false, true], "", "lview");
+        assert_eq!(build_commands(&state), vec!["lview ssh root@ip2"]);
     }
 }
