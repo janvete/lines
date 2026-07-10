@@ -50,6 +50,7 @@ fn draw_custom(f: &mut Frame, app: &mut App) {
         .constraints([
             Constraint::Min(5),
             Constraint::Length(5),
+            Constraint::Length(5),
             Constraint::Length(1),
         ])
         .split(f.area());
@@ -111,13 +112,27 @@ fn draw_custom(f: &mut Frame, app: &mut App) {
         .wrap(Wrap { trim: true });
     f.render_widget(input, chunks[1]);
 
-    let help = "↑/↓: move | Space: toggle | a: select all | Tab: focus | Enter: run | Esc: back";
+    let pre_command = Paragraph::new(state.pre_command.as_str())
+        .block(
+            Block::default()
+                .title(" Pre-command ")
+                .borders(Borders::ALL)
+                .border_style(if state.focus == CustomFocus::PreCommand {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                }),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(pre_command, chunks[2]);
+
+    let help = "↑/↓: move | Space: toggle | a: select all | Tab: focus | Enter: run | Esc: back | scroll: move";
     let text = match &app.message {
         Some(msg) => Text::from(msg.as_str()),
         None => Text::from(help),
     };
     let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Gray));
-    f.render_widget(paragraph, chunks[2]);
+    f.render_widget(paragraph, chunks[3]);
 }
 
 fn draw_search(f: &mut Frame, app: &mut App) {

@@ -1,21 +1,23 @@
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind};
 use std::io;
 use std::time::Duration;
 
-use crate::app::{App, CustomFocus, PendingCommand, Screen};
+use crate::app::{App, CustomFocus, CustomState, PendingCommand, Screen};
 use crate::commands::{edit_file, run_section};
 use crate::custom::build_commands;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum AppEvent {
     Tick,
     Key(event::KeyEvent),
+    Mouse(event::MouseEvent),
 }
 
 pub fn poll_event(timeout: Duration) -> io::Result<Option<AppEvent>> {
     if event::poll(timeout)? {
         match event::read()? {
             Event::Key(key) => Ok(Some(AppEvent::Key(key))),
+            Event::Mouse(mouse) => Ok(Some(AppEvent::Mouse(mouse))),
             _ => Ok(Some(AppEvent::Tick)),
         }
     } else {
@@ -35,6 +37,49 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
                 Screen::Main => handle_main_event(app, key),
                 Screen::Custom => handle_custom_event(app, key),
                 Screen::Search => handle_search_event(app, key),
+            }
+        }
+        AppEvent::Mouse(mouse) => match mouse.kind {
+            MouseEventKind::ScrollDown => {
+                scroll_down(app);
+                true
+            }
+            MouseEventKind::ScrollUp => {
+                scroll_up(app);
+                true
+            }
+            _ => true,
+        },
+    }
+}
+
+fn scroll_down(app: &mut App) {
+    match app.screen {
+        Screen::Main => app.next(),
+        Screen::Custom => {
+            if let Some(state) = app.custom_state.as_mut() {
+                state.next();
+            }
+        }
+        Screen::Search => {
+            if let Some(state) = app.search_state.as_mut() && !state.results.is_empty() {
+                state.cursor = (state.cursor + 1) % state.results.len();
+            }
+        }
+    }
+}
+
+fn scroll_up(app: &mut App) {
+    match app.screen {
+        Screen::Main => app.previous(),
+        Screen::Custom => {
+            if let Some(state) = app.custom_state.as_mut() {
+                state.previous();
+            }
+        }
+        Screen::Search => {
+            if let Some(state) = app.search_state.as_mut() && !state.results.is_empty() {
+                state.cursor = state.cursor.checked_sub(1).unwrap_or(state.results.len() - 1);
             }
         }
     }
@@ -115,11 +160,7 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
             app.exit_custom();
         }
         KeyCode::Tab => {
-            if state.focus == CustomFocus::Lines {
-                state.focus_input();
-            } else {
-                state.focus_lines();
-            }
+            state.cycle_focus();
         }
         KeyCode::Down => {
             if state.focus == CustomFocus::Lines {
@@ -135,21 +176,21 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
             if state.focus == CustomFocus::Lines {
                 state.toggle();
             } else {
-                state.command.push(' ');
+                push_to_active_input(state, ' ');
             }
         }
         KeyCode::Char('a') => {
             if state.focus == CustomFocus::Lines {
                 state.toggle_all();
             } else {
-                state.command.push('a');
+                push_to_active_input(state, 'a');
             }
         }
         KeyCode::Backspace => {
-            state.command.pop();
+            pop_from_active_input(state);
         }
         KeyCode::Enter => {
-            if state.focus == CustomFocus::Input {
+            if state.focus == CustomFocus::Input || state.focus == CustomFocus::PreCommand {
                 let commands = build_commands(state);
                 if !commands.is_empty()
                     && let (Some(file), Some(group)) = (app.current_file(), app.current_group())
@@ -163,15 +204,39 @@ fn handle_custom_event(app: &mut App, key: event::KeyEvent) -> bool {
                     return false;
                 }
             } else {
-                state.focus_input();
+                state.focus = CustomFocus::Input;
             }
         }
         KeyCode::Char(c) => {
-            state.command.push(c);
+            if state.focus == CustomFocus::Lines {
+                state.command.push(c);
+            } else {
+                push_to_active_input(state, c);
+            }
         }
         _ => {}
     }
     true
+}
+
+fn push_to_active_input(state: &mut CustomState, c: char) {
+    match state.focus {
+        CustomFocus::Input => state.command.push(c),
+        CustomFocus::PreCommand => state.pre_command.push(c),
+        CustomFocus::Lines => {}
+    }
+}
+
+fn pop_from_active_input(state: &mut CustomState) {
+    match state.focus {
+        CustomFocus::Input => {
+            state.command.pop();
+        }
+        CustomFocus::PreCommand => {
+            state.pre_command.pop();
+        }
+        CustomFocus::Lines => {}
+    }
 }
 
 fn handle_search_event(app: &mut App, key: event::KeyEvent) -> bool {

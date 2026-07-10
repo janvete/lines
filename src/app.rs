@@ -40,6 +40,7 @@ pub struct PendingCommand {
 pub enum CustomFocus {
     Lines,
     Input,
+    PreCommand,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +56,7 @@ pub struct CustomState {
     pub cursor: usize,
     pub focus: CustomFocus,
     pub command: String,
+    pub pre_command: String,
     pub list_state: ListState,
 }
 
@@ -81,6 +83,7 @@ impl CustomState {
             cursor: 0,
             focus: CustomFocus::Lines,
             command: String::new(),
+            pre_command: String::new(),
             list_state,
         }
     }
@@ -115,12 +118,12 @@ impl CustomState {
             .collect()
     }
 
-    pub fn focus_input(&mut self) {
-        self.focus = CustomFocus::Input;
-    }
-
-    pub fn focus_lines(&mut self) {
-        self.focus = CustomFocus::Lines;
+    pub fn cycle_focus(&mut self) {
+        self.focus = match self.focus {
+            CustomFocus::Lines => CustomFocus::Input,
+            CustomFocus::Input => CustomFocus::PreCommand,
+            CustomFocus::PreCommand => CustomFocus::Lines,
+        };
     }
 
     pub fn toggle_all(&mut self) {
