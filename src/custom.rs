@@ -26,13 +26,30 @@ pub fn build_commands(state: &CustomState) -> Vec<String> {
             let built = if command.is_empty() {
                 line.to_string()
             } else if command.contains("{}") {
-                command.replace("{}", line)
+                escape_dollars(&command.replace("{}", line))
             } else {
-                format!("{} \"{}\"", line, command.replace('"', "\\\""))
+                let escaped = escape_dollars(command).replace('"', "\\\"");
+                format!("{} \"{}\"", line, escaped)
             };
             format!("{}{}", prefix, built)
         })
         .collect()
+}
+
+/// Escape `$` as `\$` unless it is already escaped, so that variables are
+/// expanded by the remote shell rather than the local one when the built
+/// command is passed to `ssh`.
+fn escape_dollars(command: &str) -> String {
+    let mut result = String::with_capacity(command.len());
+    let mut prev_backslash = false;
+    for c in command.chars() {
+        if c == '$' && !prev_backslash {
+            result.push('\\');
+        }
+        result.push(c);
+        prev_backslash = c == '\\' && !prev_backslash;
+    }
+    result
 }
 
 #[cfg(test)]
@@ -124,5 +141,42 @@ mod tests {
     fn test_build_commands_pre_command_only() {
         let state = make_state(vec!["ssh root@ip1", "ssh root@ip2"], vec![false, true], "", "lview");
         assert_eq!(build_commands(&state), vec!["lview ssh root@ip2"]);
+    }
+
+    #[test]
+    fn test_build_commands_escapes_dollar_variables() {
+        let state = make_state(
+            vec!["ssh root@ip1"],
+            vec![true],
+            "echo $HOME && echo $USER",
+            "",
+        );
+        assert_eq!(
+            build_commands(&state),
+            vec!["ssh root@ip1 \"echo \\$HOME && echo \\$USER\""]
+        );
+    }
+
+    #[test]
+    fn test_build_commands_preserves_already_escaped_dollars() {
+        let state = make_state(
+            vec!["ssh root@ip1"],
+            vec![true],
+            "echo \\$HOME",
+            "",
+        );
+        assert_eq!(
+            build_commands(&state),
+            vec!["ssh root@ip1 \"echo \\$HOME\""]
+        );
+    }
+
+    #[test]
+    fn test_build_commands_placeholder_escapes_dollars() {
+        let state = make_state(vec!["root@ip1"], vec![true], "ssh {} echo $HOSTNAME", "");
+        assert_eq!(
+            build_commands(&state),
+            vec!["ssh root@ip1 echo \\$HOSTNAME"]
+        );
     }
 }

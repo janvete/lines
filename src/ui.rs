@@ -173,11 +173,15 @@ fn draw_search(f: &mut Frame, app: &mut App) {
             } else {
                 Style::default()
             };
-            ListItem::new(format!(
-                "[{}] {} — {}",
-                result.group, result.file, result.section
-            ))
-            .style(style)
+            let label = if result.command.is_empty() {
+                format!("[{}] {} — {}", result.group, result.file, result.section)
+            } else {
+                format!(
+                    "[{}] {} — {} — {}",
+                    result.group, result.file, result.section, result.command
+                )
+            };
+            ListItem::new(label).style(style)
         })
         .collect();
 

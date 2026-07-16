@@ -123,6 +123,8 @@ Use `{}` as a placeholder if your lines are just addresses:
 ssh {} lsblk
 ```
 
+Variables like `$HOME` or `$USER` are treated as remote-shell variables, so they are expanded on the target host, not by your local shell.
+
 ## Global search
 
 Press `/` to search across all commands, files, groups, and section names. Type your query, use `↑/↓` to select a result, and press `Enter` to run it.
