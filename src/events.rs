@@ -11,6 +11,7 @@ pub enum AppEvent {
     Tick,
     Key(event::KeyEvent),
     Mouse(event::MouseEvent),
+    Paste(String),
 }
 
 pub fn poll_event(timeout: Duration) -> io::Result<Option<AppEvent>> {
@@ -18,6 +19,7 @@ pub fn poll_event(timeout: Duration) -> io::Result<Option<AppEvent>> {
         match event::read()? {
             Event::Key(key) => Ok(Some(AppEvent::Key(key))),
             Event::Mouse(mouse) => Ok(Some(AppEvent::Mouse(mouse))),
+            Event::Paste(text) => Ok(Some(AppEvent::Paste(text))),
             _ => Ok(Some(AppEvent::Tick)),
         }
     } else {
@@ -50,6 +52,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) -> bool {
             }
             _ => true,
         },
+        AppEvent::Paste(text) => handle_paste_event(app, &text),
     }
 }
 
@@ -236,6 +239,35 @@ fn pop_from_active_input(state: &mut CustomState) {
             state.pre_command.pop();
         }
         CustomFocus::Lines => {}
+    }
+}
+
+fn handle_paste_event(app: &mut App, text: &str) -> bool {
+    match app.screen {
+        Screen::Main => true,
+        Screen::Custom => {
+            let Some(state) = app.custom_state.as_mut() else {
+                app.exit_custom();
+                return true;
+            };
+            match state.focus {
+                CustomFocus::Input => state.command.push_str(text),
+                CustomFocus::PreCommand => state.pre_command.push_str(text),
+                CustomFocus::Lines => {}
+            }
+            true
+        }
+        Screen::Search => {
+            let Some(state) = app.search_state.as_mut() else {
+                app.exit_search();
+                return true;
+            };
+            // Search queries are single-line; keep only the first pasted line.
+            let query = text.lines().next().unwrap_or(text);
+            state.query.push_str(query);
+            app.update_search();
+            true
+        }
     }
 }
 
