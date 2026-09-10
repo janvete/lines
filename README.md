@@ -7,24 +7,22 @@ A TUI app for quickly running frequently used commands — ideal for SSH scripts
 ### macOS (Homebrew)
 
 ```bash
-brew tap janvete/tools
+brew tap janvete/tools https://git.janvete.com/seth/homebrew-tools.git
 brew install lines
 ```
 
-### Debian / Ubuntu (.deb)
-
-Download the latest `.deb` from the [GitHub Releases](https://github.com/janvete/lines/releases) page and install it:
+### Debian / Ubuntu (APT)
 
 ```bash
-sudo apt install ./lines_*.deb
-# or
-sudo dpkg -i lines_*.deb
+echo "deb [trusted=yes] https://git.janvete.com/seth/apt/raw/branch/main ./" | sudo tee /etc/apt/sources.list.d/janvete.list
+sudo apt update
+sudo apt install lines
 ```
 
 ### From source
 
 ```bash
-cargo install --git https://github.com/janvete/lines
+cargo install --git ssh://git@git-ssh.janvete.com:554/seth/lines
 ```
 
 ## Usage
